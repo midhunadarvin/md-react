@@ -1,0 +1,30 @@
+{
+  "name": "md-react",
+  "version": "1.0.0",
+  "description": "A basic clone of React for learning purpose",
+  "main": "src/index.js",
+  "scripts": {
+    "ts:build": "tsc --build --clean",
+    "ts:watch": "tsc --watch",
+    "server": "http-server ./dist -p 3000",
+    "dev": "webpack-dev-server --mode development",
+    "build": "webpack --mode production",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "react",
+    "midhun",
+    "darvin"
+  ],
+  "author": "midhunadarvin",
+  "license": "ISC",
+  "devDependencies": {
+    "copy-webpack-plugin": "^9.0.1",
+    "ts-loader": "^9.2.5",
+    "typescript": "^4.4.3",
+    "uglifyjs-webpack-plugin": "^2.2.0",
+    "webpack": "^5.52.1",
+    "webpack-cli": "^4.8.0",
+    "webpack-dev-server": "^4.2.0"
+  }
+}
