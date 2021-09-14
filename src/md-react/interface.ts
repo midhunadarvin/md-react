@@ -10,4 +10,6 @@ export interface FibreNode {
   child?: FibreNode;
   sibling?: FibreNode;
   dom: null | HTMLElement | Text;
+  alternate?: FibreNode;
+  effectTag?: string;
 }

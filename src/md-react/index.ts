@@ -1,5 +1,5 @@
-import { createElement, createTextElement, render } from "./utils";
-
+import { createElement, createTextElement } from "./utils";
+import { render } from "./render";
 const MDReact = {
   render,
   createElement,

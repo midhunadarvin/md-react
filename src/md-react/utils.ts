@@ -1,6 +1,4 @@
-import { getWipRoot, setNextUnitOfWork, setWipRoot } from "./context";
 import { FibreNode, MDReactElement } from "./interface";
-import { workLoop } from "./workloop";
 /* Create an Element */
 export function createElement(
   type: string,
@@ -49,13 +47,41 @@ export function createDom(element: FibreNode) {
   return dom;
 }
 
-export function render(element: MDReactElement, container: HTMLElement | Text) {
-  setWipRoot({
-    dom: container,
-    props: {
-      children: [element],
-    },
-  });
-  setNextUnitOfWork(getWipRoot());
-  requestIdleCallback(workLoop);
+const isEvent = (key: string) => key.startsWith("on");
+const isProperty = (key: string) => key !== "children" && !isEvent(key);
+const isNew = (prev: any, next: any) => (key: string) =>
+  prev[key] !== next[key];
+const isGone = (prev: any, next: any) => (key: string) => !(key in next);
+
+export function updateDom(dom: any, prevProps: any, nextProps: any) {
+  //Remove old or changed event listeners
+  Object.keys(prevProps)
+    .filter(isEvent)
+    .filter((key) => !(key in nextProps) || isNew(prevProps, nextProps)(key))
+    .forEach((name) => {
+      const eventType = name.toLowerCase().substring(2);
+      dom.removeEventListener(eventType, prevProps[name]);
+    });
+  // Remove old properties
+  Object.keys(prevProps)
+    .filter(isProperty)
+    .filter(isGone(prevProps, nextProps))
+    .forEach((name) => {
+      dom[name] = "";
+    });
+  // Set new or changed properties
+  Object.keys(nextProps)
+    .filter(isProperty)
+    .filter(isNew(prevProps, nextProps))
+    .forEach((name) => {
+      dom[name] = nextProps[name];
+    });
+  // Add event listeners
+  Object.keys(nextProps)
+    .filter(isEvent)
+    .filter(isNew(prevProps, nextProps))
+    .forEach((name) => {
+      const eventType = name.toLowerCase().substring(2);
+      dom.addEventListener(eventType, nextProps[name]);
+    });
 }

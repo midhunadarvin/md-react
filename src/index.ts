@@ -1,5 +1,8 @@
 import MDReact from "./md-react";
 
-const element = MDReact.createElement("h1", { title: "foo" }, "Hello");
+function App(props: any) {
+  return MDReact.createElement("h1", null, "Hi, ", props.name);
+}
+
 const container = document.getElementById("root");
-MDReact.render(element, container);
+MDReact.render(App({ name: "Hello world" }), container);

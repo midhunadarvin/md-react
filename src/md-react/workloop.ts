@@ -1,11 +1,14 @@
 import {
+  getDeletions,
   getNextUnitOfWork,
   getWipRoot,
+  setCurrentWipRoot,
   setNextUnitOfWork,
   setWipRoot,
 } from "./context";
 import { FibreNode } from "./interface";
-import { createDom } from "./utils";
+import { reconcileChildren } from "./reconciliation";
+import { createDom, updateDom } from "./utils";
 
 interface Deadline {
   timeRemaining: () => number;
@@ -19,6 +22,7 @@ export function workLoop(deadline: Deadline) {
     shouldYield = deadline.timeRemaining() < 1;
   }
 
+  // If there are no more units of work to be done. We can commit our changes (work in progress root) to the DOM.
   if (!nextUnitOfWork && getWipRoot()) {
     commitRoot();
   }
@@ -30,34 +34,9 @@ function performUnitOfWork(fiber: FibreNode) {
   if (!fiber.dom) {
     fiber.dom = createDom(fiber);
   }
-  // if (fiber.parent) {
-  //   fiber.parent.dom.appendChild(fiber.dom);
-  // }
 
   const elements = fiber.props.children;
-  let index = 0;
-  let prevSibling = null;
-
-  // Loop through all children and create sibling relationship.
-  while (index < elements.length) {
-    const element = elements[index];
-    const newFiber: FibreNode = {
-      type: element.type,
-      props: element.props,
-      parent: fiber,
-      dom: null,
-    };
-
-    if (index === 0) {
-      // Establish parent relationship for the 1st child
-      fiber.child = newFiber;
-    } else {
-      // Create link from previous sibling to the current node
-      prevSibling.sibling = newFiber;
-    }
-    prevSibling = newFiber;
-    index++;
-  }
+  reconcileChildren(fiber, elements);
 
   // Return the next unit of work (next fibre node)
   if (fiber.child) {
@@ -77,9 +56,18 @@ function performUnitOfWork(fiber: FibreNode) {
 }
 
 export function commitRoot() {
-  // TODO add nodes to dom
+  getDeletions().forEach(commitWork);
+
+  // Get the current work in progress root
   const wipRoot = getWipRoot();
+  // Commit the changes to the DOM.
   commitWork(wipRoot.child);
+
+  // Save the current work in progress root, so that it can be serve as a
+  // referrence to compare the changes between state updates.
+  setCurrentWipRoot(wipRoot);
+
+  // Make the work in progress root to be null, to be reused in the next cycle.
   setWipRoot(null);
 }
 
@@ -88,7 +76,15 @@ function commitWork(fiber: FibreNode) {
     return;
   }
   const domParent = fiber.parent.dom;
-  domParent.appendChild(fiber.dom);
+
+  if (fiber.effectTag === "PLACEMENT" && fiber.dom != null) {
+    domParent.appendChild(fiber.dom);
+  } else if (fiber.effectTag === "UPDATE" && fiber.dom != null) {
+    updateDom(fiber.dom, fiber.alternate.props, fiber.props);
+  } else if (fiber.effectTag === "DELETION") {
+    domParent.removeChild(fiber.dom);
+  }
+
   commitWork(fiber.child);
   commitWork(fiber.sibling);
 }
