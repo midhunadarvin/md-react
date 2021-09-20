@@ -2,18 +2,30 @@ import {
   getDeletions,
   getNextUnitOfWork,
   getWipRoot,
-  setCurrentWipRoot,
+  setCurrentRoot,
   setNextUnitOfWork,
   setWipRoot,
 } from "./context";
 import { FibreNode } from "./interface";
 import { reconcileChildren } from "./reconciliation";
-import { createDom, updateDom } from "./utils";
+import {
+  createDom,
+  updateDom,
+  updateFunctionComponent,
+  updateHostComponent,
+} from "./utils";
 
 interface Deadline {
   timeRemaining: () => number;
 }
 
+/* 
+  Once we start rendering, we won’t stop until we have rendered the complete element tree.
+  If the element tree is big, it may block the main thread for too long. And if the browser needs to do high priority
+  stuff like handling user input or keeping an animation smooth, it will have to wait until the render finishes.
+
+  This function divides the work into smaller chunks so that it doesn't block the call stack.
+*/
 export function workLoop(deadline: Deadline) {
   let shouldYield = false;
   const nextUnitOfWork = getNextUnitOfWork();
@@ -31,12 +43,12 @@ export function workLoop(deadline: Deadline) {
 }
 
 function performUnitOfWork(fiber: FibreNode) {
-  if (!fiber.dom) {
-    fiber.dom = createDom(fiber);
+  const isFunctionComponent = fiber.type instanceof Function;
+  if (isFunctionComponent) {
+    updateFunctionComponent(fiber);
+  } else {
+    updateHostComponent(fiber);
   }
-
-  const elements = fiber.props.children;
-  reconcileChildren(fiber, elements);
 
   // Return the next unit of work (next fibre node)
   if (fiber.child) {
@@ -65,7 +77,7 @@ export function commitRoot() {
 
   // Save the current work in progress root, so that it can be serve as a
   // referrence to compare the changes between state updates.
-  setCurrentWipRoot(wipRoot);
+  setCurrentRoot(wipRoot);
 
   // Make the work in progress root to be null, to be reused in the next cycle.
   setWipRoot(null);
@@ -75,16 +87,31 @@ function commitWork(fiber: FibreNode) {
   if (!fiber) {
     return;
   }
-  const domParent = fiber.parent.dom;
+
+  // To find the parent of a DOM node we’ll need to go up the fiber tree until we find a fiber with a DOM node.
+  // In case of function components, they won't have a dom
+  let domParentFiber = fiber.parent;
+  while (!domParentFiber.dom) {
+    domParentFiber = domParentFiber.parent;
+  }
+  const domParent = domParentFiber.dom;
 
   if (fiber.effectTag === "PLACEMENT" && fiber.dom != null) {
     domParent.appendChild(fiber.dom);
   } else if (fiber.effectTag === "UPDATE" && fiber.dom != null) {
     updateDom(fiber.dom, fiber.alternate.props, fiber.props);
   } else if (fiber.effectTag === "DELETION") {
-    domParent.removeChild(fiber.dom);
+    commitDeletion(fiber, domParent);
   }
 
   commitWork(fiber.child);
   commitWork(fiber.sibling);
+}
+
+function commitDeletion(fiber: FibreNode, domParent: HTMLElement | Text) {
+  if (fiber.dom) {
+    domParent.removeChild(fiber.dom);
+  } else {
+    commitDeletion(fiber.child, domParent);
+  }
 }

@@ -4,7 +4,7 @@ export interface MDReactElement {
 }
 
 export interface FibreNode {
-  type?: string;
+  type?: string | Function;
   props: any;
   parent?: FibreNode;
   child?: FibreNode;
@@ -12,4 +12,5 @@ export interface FibreNode {
   dom: null | HTMLElement | Text;
   alternate?: FibreNode;
   effectTag?: string;
+  hooks?: any[];
 }

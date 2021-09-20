@@ -1,5 +1,5 @@
 import {
-  getCurrentWipRoot,
+  getCurrentRoot,
   getWipRoot,
   setDeletions,
   setNextUnitOfWork,
@@ -16,7 +16,7 @@ export function render(element: MDReactElement, container: HTMLElement | Text) {
     props: {
       children: [element],
     },
-    alternate: getCurrentWipRoot(),
+    alternate: getCurrentRoot(),
   });
   setDeletions([]);
   setNextUnitOfWork(getWipRoot());

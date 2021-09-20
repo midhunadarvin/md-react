@@ -41,17 +41,14 @@ export function reconcileChildren(wipFiber: FibreNode, elements: FibreNode[]) {
       getDeletions().push(oldFiber);
     }
 
-    // const newFiber: FibreNode = {
-    //   type: element.type,
-    //   props: element.props,
-    //   parent: wipFiber,
-    //   dom: null,
-    // };
+    if (oldFiber) {
+      oldFiber = oldFiber.sibling;
+    }
 
     if (index === 0) {
       // Establish parent relationship for the 1st child
       wipFiber.child = newFiber;
-    } else {
+    } else if (element) {
       // Create link from previous sibling to the current node
       prevSibling.sibling = newFiber;
     }

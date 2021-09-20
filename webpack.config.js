@@ -3,13 +3,17 @@ const UglifyJsPlugin = require("uglifyjs-webpack-plugin");
 const CopyWebpackPlugin = require("copy-webpack-plugin");
 
 module.exports = {
-  entry: "./src/index.ts",
+  entry: "./src/index",
   devtool: "inline-source-map",
   module: {
     rules: [
       {
         test: /\.tsx?$/,
-        use: "ts-loader",
+        use: [
+          {
+            loader: "babel-loader",
+          },
+        ],
         exclude: /node_modules/,
       },
     ],

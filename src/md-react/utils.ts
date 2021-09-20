@@ -1,4 +1,6 @@
+import { getWipFiber, setHookIndex, setWipFiber } from "./context";
 import { FibreNode, MDReactElement } from "./interface";
+import { reconcileChildren } from "./reconciliation";
 /* Create an Element */
 export function createElement(
   type: string,
@@ -31,18 +33,9 @@ export function createDom(element: FibreNode) {
   const dom =
     element.type == "TEXT_ELEMENT"
       ? document.createTextNode("")
-      : document.createElement(element.type);
+      : document.createElement(element.type as string);
 
-  Object.keys(element.props)
-    .filter((key: string) => key !== "children")
-    .forEach((name) => {
-      if (dom instanceof HTMLElement) {
-        dom.setAttribute(name, element.props[name]);
-      }
-      if (dom instanceof Text && name === "nodeValue") {
-        dom[name] = element.props[name];
-      }
-    });
+  updateDom(dom, {}, element.props);
 
   return dom;
 }
@@ -84,4 +77,22 @@ export function updateDom(dom: any, prevProps: any, nextProps: any) {
       const eventType = name.toLowerCase().substring(2);
       dom.addEventListener(eventType, nextProps[name]);
     });
+}
+
+export function updateHostComponent(fiber: FibreNode) {
+  if (!fiber.dom) {
+    fiber.dom = createDom(fiber);
+  }
+
+  reconcileChildren(fiber, fiber.props.children);
+}
+
+export function updateFunctionComponent(fiber: FibreNode) {
+  if (fiber.type instanceof Function) {
+    setWipFiber(fiber);
+    setHookIndex(0);
+    getWipFiber().hooks = [];
+    const children = [fiber.type(fiber.props)];
+    reconcileChildren(fiber, children);
+  }
 }
