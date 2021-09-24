@@ -7,5 +7,4 @@ const MDReact = {
   createTextElement,
   useState,
 };
-
 export default MDReact;
