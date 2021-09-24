@@ -7,13 +7,21 @@ export function createElement(
   props: Object,
   ...children: any[]
 ): MDReactElement {
+  const childrenResult: any = [];
+  children.forEach((child) => {
+    if (Array.isArray(child)) {
+      childrenResult.push(...child);
+    } else if (typeof child === "object") {
+      childrenResult.push(child);
+    } else {
+      childrenResult.push(createTextElement(child));
+    }
+  });
   return {
     type,
     props: {
       ...props,
-      children: children.map((child) =>
-        typeof child === "object" ? child : createTextElement(child)
-      ),
+      children: childrenResult,
     },
   };
 }
@@ -48,43 +56,52 @@ const isGone = (prev: any, next: any) => (key: string) => !(key in next);
 
 export function updateDom(dom: any, prevProps: any, nextProps: any) {
   //Remove old or changed event listeners
-  Object.keys(prevProps)
-    .filter(isEvent)
-    .filter((key) => !(key in nextProps) || isNew(prevProps, nextProps)(key))
-    .forEach((name) => {
-      const eventType = name.toLowerCase().substring(2);
-      dom.removeEventListener(eventType, prevProps[name]);
-    });
+  if (prevProps) {
+    Object.keys(prevProps)
+      .filter(isEvent)
+      .filter((key) => !(key in nextProps) || isNew(prevProps, nextProps)(key))
+      .forEach((name) => {
+        const eventType = name.toLowerCase().substring(2);
+        dom.removeEventListener(eventType, prevProps[name]);
+      });
+  }
   // Remove old properties
-  Object.keys(prevProps)
-    .filter(isProperty)
-    .filter(isGone(prevProps, nextProps))
-    .forEach((name) => {
-      dom[name] = "";
-    });
+  if (prevProps) {
+    Object.keys(prevProps)
+      .filter(isProperty)
+      .filter(isGone(prevProps, nextProps))
+      .forEach((name) => {
+        dom[name] = "";
+      });
+  }
   // Set new or changed properties
-  Object.keys(nextProps)
-    .filter(isProperty)
-    .filter(isNew(prevProps, nextProps))
-    .forEach((name) => {
-      dom[name] = nextProps[name];
-    });
+  if (nextProps) {
+    Object.keys(nextProps)
+      .filter(isProperty)
+      .filter(isNew(prevProps, nextProps))
+      .forEach((name) => {
+        dom[name] = nextProps[name];
+      });
+  }
   // Add event listeners
-  Object.keys(nextProps)
-    .filter(isEvent)
-    .filter(isNew(prevProps, nextProps))
-    .forEach((name) => {
-      const eventType = name.toLowerCase().substring(2);
-      dom.addEventListener(eventType, nextProps[name]);
-    });
+  if (nextProps) {
+    Object.keys(nextProps)
+      .filter(isEvent)
+      .filter(isNew(prevProps, nextProps))
+      .forEach((name) => {
+        const eventType = name.toLowerCase().substring(2);
+        dom.addEventListener(eventType, nextProps[name]);
+      });
+  }
 }
 
 export function updateHostComponent(fiber: FibreNode) {
   if (!fiber.dom) {
     fiber.dom = createDom(fiber);
   }
-
-  reconcileChildren(fiber, fiber.props.children);
+  if (fiber.props && fiber.props.children) {
+    reconcileChildren(fiber, fiber.props.children);
+  }
 }
 
 export function updateFunctionComponent(fiber: FibreNode) {

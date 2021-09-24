@@ -23,7 +23,11 @@ export function useState(initial: any) {
 
   const actions = oldHook ? oldHook.queue : [];
   actions.forEach((action: any) => {
-    hook.state = action(hook.state);
+    if (typeof action === "function") {
+      hook.state = action(hook.state);
+    } else {
+      hook.state = action;
+    }
   });
 
   const setState = (action: any) => {
